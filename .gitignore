@@ -46,3 +46,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local screenshots / gallery (test artifacts, kept out of the repo)
+/screenshots/
+
+# Android build reports (intermediate)
+/android/build/
