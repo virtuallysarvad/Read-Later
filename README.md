@@ -12,9 +12,13 @@ A Pocket-inspired read-later app for Android, built with Flutter.
   saved so you can resume later. While playing, a **media notification** with
   play/pause, skip and a seek bar appears — including **lock-screen controls**
   (`audio_service`), and playback keeps running in the background.
-- **Google Drive backup** — the library syncs to a private *"Read Later Backup"*
-  folder in your own Google Drive (no third-party server).
+- **File backup** — export your library to a JSON file (and restore it)
+  through the Android native files app; you decide where it lives.
 - Favorites, archiving, search, read-progress tracking, light/dark themes.
+- **Simple theming** — **Light**, **Dark** (Pocket red palette) or
+  **Dynamic** (follows your system's Material You colors and light/dark mode),
+  selectable in **Settings → Appearance**. Bold black text in light mode,
+  bold white text in dark mode.
 
 ## Getting started
 
@@ -37,27 +41,17 @@ is set because the `receive_sharing_intent` plugin mixes JVM targets under newer
 2. Or open the app, tap **+**, and paste a link.
 3. The app fetches the page, extracts the readable content, and saves it.
 
-## Google Drive backup (optional)
+## File backup
 
-Backup/restore lives in **Settings → Backup**. It uses the `drive.file` scope,
-so Read Later can only see the folder and file it creates.
+Backup/restore lives in **Settings → Backup**. No account or permissions are
+needed:
 
-To enable sign-in you must register an OAuth client ID for this app:
-
-1. In [Google Cloud Console](https://console.cloud.google.com), create a project
-   (or reuse one) and enable the **Google Drive API**.
-2. Go to **APIs & Services → Credentials → Create credentials → OAuth client ID**,
-   choose **Android**, and enter:
-   - Package name: `com.readlater.read_later`
-   - SHA-1 signing certificate fingerprint. For the debug build it is the
-     debug keystore's fingerprint:
-     ```bash
-     keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android
-     ```
-     (Add the release keystore's fingerprint too when you ship.)
-3. Save, then reinstall the app on the device. **Back up now** uploads a
-   `read_later_backup.json`; **Restore** downloads it and merges by URL, keeping
-   the newer copy of each article (local-only articles are never deleted).
+- **Back up** opens the Android native files app where you choose the location
+  (e.g. Downloads, or Google Drive if you have it) and saves a
+  `read_later_backup.json`.
+- **Restore** opens the files app to pick a backup file. It merges by URL,
+  keeping the newer copy of each article — local-only articles are never
+  deleted.
 
 ## Architecture
 
@@ -72,7 +66,7 @@ lib/
 ├── services/
 │   ├── article_extractor.dart # fetch + Readability extraction + URL absolutizing
 │   ├── tts_service.dart       # podcast-style TTS: segments, position, speed
-│   └── drive_sync_service.dart# Google Drive backup/restore
+│   └── backup_service.dart    # JSON export/import via the native file picker
 ├── screens/                   # home, add-article, reader, listening, settings
 ├── widgets/                   # article card, mini player bar
 ├── theme/app_theme.dart       # Material 3 theme (Pocket red, serif reader text)
@@ -84,8 +78,8 @@ lib/
 - **Listening** — text is chunked into ~350-character segments; each segment is
   spoken and then the next starts, mirroring Pocket's Listen feature. Progress
   (character offset + segment index) is persisted per article.
-- **Storage** — all data lives in a local SQLite database; Drive is only a
-  backup/restore channel.
+- **Storage** — all data lives in a local SQLite database; backups are JSON
+  files the user saves/opens through the native files app.
 
 ## Tests
 
@@ -94,8 +88,8 @@ flutter test
 ```
 
 Covers the text chunker, on-device extraction (incl. ad-stripping and the
-metadata fallback), and the repository (persistence, upsert-by-URL, backup
-merge, JSON round-trip).
+metadata fallback), the repository (persistence, upsert-by-URL, backup merge,
+JSON round-trip), the theme system, and app-level provider wiring.
 
 ## Roadmap ideas
 

@@ -19,8 +19,16 @@ Future<void> main() async {
     config: const AudioServiceConfig(
       androidNotificationChannelId: 'com.readlater.read_later.playback',
       androidNotificationChannelName: 'Listening',
-      androidNotificationOngoing: true,
-      androidStopForegroundOnPause: true,
+      // Keep the notification and foreground service while paused so the
+      // player is persistent and can be resumed from the shade/lock screen.
+      // (audio_service forbids androidNotificationOngoing when the service
+      // stays in the foreground while paused.)
+      androidNotificationOngoing: false,
+      androidStopForegroundOnPause: false,
+      // Monochrome silhouette (same art as the themed launcher icon) so the
+      // media notification/status bar icon isn't a tinted blob of the
+      // full-color launcher icon. Also required for the seek bar to render.
+      androidNotificationIcon: 'mipmap/ic_stat_listening',
       notificationColor: Color(0xFFEF4056),
     ),
   );

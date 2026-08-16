@@ -8,8 +8,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../data/article_repository.dart';
 import '../models/article.dart';
 import '../services/tts_service.dart';
+import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
-import '../widgets/player_bar.dart';
+import '../widgets/mini_player.dart';
 import 'listening_screen.dart';
 
 /// Pocket-style clean reading view: ad-free extracted content, scroll-progress
@@ -123,14 +124,77 @@ class _ReaderScreenState extends State<ReaderScreen> {
           SliverAppBar(
             pinned: true,
             expandedHeight: 140,
-            // Title lives in the pinned toolbar so it never overlaps the
-            // action buttons while scrolling.
-            title: Text(
-              article.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
+            // The title lives in the FlexibleSpaceBar: it rests at the bottom
+            // of the expanded header (below the site/byline) and scales into
+            // the toolbar as the header collapses, so it never overlaps the
+            // metadata in the top-left corner or the action buttons.
+            flexibleSpace: FlexibleSpaceBar(
+              title: Text(
+                article.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              titlePadding: const EdgeInsetsDirectional.only(
+                start: 56,
+                bottom: 16,
+                end: 56,
+              ),
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      theme.colorScheme.primaryContainer
+                          .withValues(alpha: 0.35),
+                      context.appColors.backdrop,
+                    ],
+                  ),
+                ),
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    // Left inset clears the toolbar's back button, which sits
+                    // on top of the expanded header at the top-left corner.
+                    padding: const EdgeInsets.fromLTRB(72, 10, 16, 0),
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (article.siteName != null &&
+                              article.siteName!.isNotEmpty) ...[
+                            Text(
+                              article.siteName!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                          ],
+                          if (article.byline != null &&
+                              article.byline!.isNotEmpty)
+                            Text(
+                              article.byline!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
             actions: [
@@ -184,60 +248,6 @@ class _ReaderScreenState extends State<ReaderScreen> {
                 ],
               ),
             ],
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      theme.colorScheme.primaryContainer
-                          .withValues(alpha: 0.35),
-                      theme.colorScheme.surface,
-                    ],
-                  ),
-                ),
-                child: SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-                    child: Align(
-                      alignment: Alignment.topLeft,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (article.siteName != null &&
-                              article.siteName!.isNotEmpty) ...[
-                            Text(
-                              article.siteName!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.labelMedium?.copyWith(
-                                color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                          ],
-                          if (article.byline != null &&
-                              article.byline!.isNotEmpty)
-                            Text(
-                              article.byline!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
           ),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
@@ -279,7 +289,10 @@ class _ReaderScreenState extends State<ReaderScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: canListen ? PlayerBar(article: article) : null,
+      // The mini player is shared across screens, so playback and the
+      // previous/next article controls stay visible here too (YouTube/
+      // Spotify style). It only takes space while an article is loaded.
+      bottomNavigationBar: const MiniPlayer(),
     );
   }
 }
@@ -293,6 +306,7 @@ class _ExtractionFailed extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Card(
+      color: theme.colorScheme.surfaceContainerLow,
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(

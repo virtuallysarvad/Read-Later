@@ -34,6 +34,14 @@ class ArticleRepository extends ChangeNotifier {
   List<Article> get favorites =>
       _articles.where((a) => a.isFavorite).toList();
 
+  /// Articles that can be played: non-archived, with extracted text, newest
+  /// first. This is the order the mini player's previous/next buttons use.
+  List<Article> get listenable => _articles
+      .where(
+        (a) => a.status != ArticleStatus.archived && a.textContent.isNotEmpty,
+      )
+      .toList();
+
   Article? byId(String id) {
     for (final a in _articles) {
       if (a.id == id) return a;
@@ -160,6 +168,16 @@ class ArticleRepository extends ChangeNotifier {
     await _db?.delete('articles');
     _articles = [];
     notifyListeners();
+  }
+
+  /// Closes the underlying database and resets in-memory state. Useful for
+  /// test teardown (sqflite caches one instance per path, so closing lets the
+  /// next open of the same path start fresh).
+  Future<void> close() async {
+    await _db?.close();
+    _db = null;
+    _initialized = false;
+    _articles = [];
   }
 
   /// Merges a backup (e.g. from Drive) into the local store.

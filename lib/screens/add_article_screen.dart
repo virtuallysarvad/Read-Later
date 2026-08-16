@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../data/article_repository.dart';
+import '../widgets/mini_player.dart';
 
 /// Paste-a-URL screen with fetch feedback. Pops with the saved [Article] on
 /// success so callers can navigate to it.
@@ -59,6 +60,8 @@ class _AddArticleScreenState extends State<AddArticleScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Add article')),
+      // Keep playback controls visible while adding a link.
+      bottomNavigationBar: const MiniPlayer(),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(20),

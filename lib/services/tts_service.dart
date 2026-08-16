@@ -7,6 +7,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/article_repository.dart';
 import '../models/article.dart';
 import '../utils/text_chunker.dart';
 
@@ -18,6 +19,11 @@ import '../utils/text_chunker.dart';
 class TtsService extends ChangeNotifier {
   static const List<double> speedOptions = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
   static const String defaultLanguage = 'en-US';
+
+  /// SharedPreferences keys for the persisted listening session, so the
+  /// player survives an app restart and can be resumed where it left off.
+  static const String _sessionArticleKey = 'tts_session_article_id';
+  static const String _sessionSegmentKey = 'tts_session_segment';
 
   static const List<({String code, String label})> languageOptions = [
     (code: 'en-US', label: 'English (US)'),
@@ -190,6 +196,38 @@ class TtsService extends ChangeNotifier {
   /// (used by the media notification's seek bar).
   Future<void> playAtChar(int char) async {
     if (_segments.isEmpty) return;
+    final target = _segmentAtChar(char);
+    _playing = true;
+    _paused = false;
+    await _speakSegment(target);
+    notifyListeners();
+  }
+
+  /// Jumps to the segment containing character offset [char] without changing
+  /// the play/pause state (used by the scrub bars). Playback continues if it
+  /// was playing; stays paused or idle otherwise.
+  Future<void> seekToChar(int char) async {
+    if (_segments.isEmpty) return;
+    final target = _segmentAtChar(char);
+    if (_playing) {
+      // Keep playing from the new position.
+      await _speakSegment(target);
+    } else {
+      // Paused or idle: move the cursor without starting the engine.
+      try {
+        await _tts.stop();
+      } catch (_) {
+        // Ignore engine errors while seeking.
+      }
+      _segmentIndex = target;
+      await _saveProgress();
+    }
+    notifyListeners();
+  }
+
+  /// The index of the segment containing character offset [char] (clamped to
+  /// the last segment when [char] is past the end of the text).
+  int _segmentAtChar(int char) {
     var target = 0;
     for (var i = 0; i < _segments.length; i++) {
       if (_segments[i].start <= char) {
@@ -198,10 +236,7 @@ class TtsService extends ChangeNotifier {
         break;
       }
     }
-    _playing = true;
-    _paused = false;
-    await _speakSegment(target);
-    notifyListeners();
+    return target;
   }
 
   /// Jumps to the first segment of [paragraphIndex] (used when tapping a
@@ -241,12 +276,50 @@ class TtsService extends ChangeNotifier {
     await setSpeed(next);
   }
 
+  /// Loads and plays the next article in the library, wrapping around to the
+  /// first (Spotify-style). Archived articles and articles without text are
+  /// excluded from the queue; each article resumes from where it left off.
+  Future<void> playNextArticle(ArticleRepository repository) =>
+      _playSiblingArticle(repository, 1);
+
+  /// Loads and plays the previous article in the library, wrapping around to
+  /// the last.
+  Future<void> playPreviousArticle(ArticleRepository repository) =>
+      _playSiblingArticle(repository, -1);
+
+  Future<void> _playSiblingArticle(
+    ArticleRepository repository,
+    int delta,
+  ) async {
+    final queue = repository.listenable;
+    if (queue.isEmpty) return;
+    final current = _article;
+    var index = current == null
+        ? -1
+        : queue.indexWhere((a) => a.id == current.id);
+    if (index < 0) {
+      // The current article isn't in the queue (e.g. it was archived while
+      // listening); start from the top or the bottom of the queue.
+      index = delta > 0 ? -1 : queue.length;
+    }
+    // Double-mod keeps the index positive when wrapping backwards.
+    final target =
+        queue[((index + delta) % queue.length + queue.length) % queue.length];
+    await loadArticle(target);
+    await play();
+    notifyListeners();
+  }
+
   /// Stops playback and unloads the article so the mini player hides.
   Future<void> dismiss() async {
     await stop();
     _article = null;
     _segments = [];
     _segmentIndex = 0;
+    // The session is over; forget it so it isn't restored on the next launch.
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_sessionArticleKey);
+    await prefs.remove(_sessionSegmentKey);
     notifyListeners();
   }
 
@@ -277,13 +350,49 @@ class TtsService extends ChangeNotifier {
 
   Future<void> _saveProgress() async {
     final article = _article;
-    if (article == null || onProgress == null) return;
+    if (article == null) return;
+
+    // Persist the listening session so it can be resumed after a restart,
+    // even if no screen has wired an onProgress callback yet.
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_sessionArticleKey, article.id);
+    await prefs.setInt(_sessionSegmentKey, _segmentIndex);
+
+    final progress = onProgress;
+    if (progress == null) return;
     TtsSegment? segment;
     if (_segments.isNotEmpty) {
       segment = _segments[_segmentIndex % _segments.length];
     }
     final position = segment?.start ?? 0;
-    await onProgress!(article, position, _segmentIndex);
+    await progress(article, position, _segmentIndex);
+  }
+
+  /// Restores the last listening session (article + position) after an app
+  /// restart, so the mini player reappears and playback can be resumed.
+  ///
+  /// Loads the article and seeks to the saved segment without auto-playing.
+  /// Does nothing when a session is already active or nothing was saved.
+  Future<void> restoreSession(ArticleRepository repository) async {
+    if (_segments.isNotEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    final articleId = prefs.getString(_sessionArticleKey);
+    if (articleId == null) return;
+
+    final article = repository.byId(articleId);
+    if (article == null || article.textContent.isEmpty) {
+      // The article was deleted or can't be listened to; drop the stale session.
+      await prefs.remove(_sessionArticleKey);
+      await prefs.remove(_sessionSegmentKey);
+      return;
+    }
+
+    _article = article;
+    _segments = TextChunker.chunk(article.textContent);
+    _segmentIndex = _clampSegment(
+      prefs.getInt(_sessionSegmentKey) ?? article.listenSegment,
+    );
+    notifyListeners();
   }
 
   int _clampSegment(int segment) {

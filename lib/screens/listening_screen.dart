@@ -25,7 +25,10 @@ class _ListeningScreenState extends State<ListeningScreen> {
 
   static const _bg = Color(0xFF0E1224);
   static const _fg = Color(0xFFE8EAF2);
-  static const _muted = Color(0xFF8B90A6);
+  // No grey text: every paragraph renders near-white on the dark backdrop.
+  // The current paragraph is told apart by the red highlight while playing
+  // and by the heavier weight.
+  static const _muted = Color(0xFFE8EAF2);
 
   @override
   void initState() {
@@ -150,8 +153,8 @@ class _ListeningScreenState extends State<ListeningScreen> {
                                         : _fg
                                     : _muted,
                                 fontWeight: isCurrent
-                                    ? FontWeight.w600
-                                    : FontWeight.w400,
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
                               ),
                             ),
                           ),
@@ -221,7 +224,7 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _Controls extends StatelessWidget {
+class _Controls extends StatefulWidget {
   final TtsService tts;
   final bool playing;
   final bool paused;
@@ -233,7 +236,19 @@ class _Controls extends StatelessWidget {
   });
 
   @override
+  State<_Controls> createState() => _ControlsState();
+}
+
+class _ControlsState extends State<_Controls> {
+  /// Progress preview while the user drags the slider (null = show live
+  /// progress). The seek commits when the drag ends.
+  double? _dragFraction;
+
+  @override
   Widget build(BuildContext context) {
+    final tts = widget.tts;
+    final playing = widget.playing;
+    final paused = widget.paused;
     final active = playing || paused;
     return Container(
       decoration: const BoxDecoration(
@@ -267,8 +282,26 @@ class _Controls extends StatelessWidget {
               ],
             ),
           ),
+          // Scrubbable progress bar: drag to preview, release to seek.
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: const Color(0xFFFF5C6C),
+              inactiveTrackColor: const Color(0xFF22294A),
+              thumbColor: const Color(0xFFFF5C6C),
+              overlayColor: const Color(0x33FF5C6C),
+              trackHeight: 3,
+            ),
+            child: Slider(
+              value: _dragFraction ?? tts.progressFraction,
+              onChanged: (v) => setState(() => _dragFraction = v),
+              onChangeEnd: (v) {
+                tts.seekToChar((v * tts.totalLength).round());
+                setState(() => _dragFraction = null);
+              },
+            ),
+          ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [

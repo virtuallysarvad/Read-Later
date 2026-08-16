@@ -39,9 +39,11 @@ dependencies:
   http: ^1.6.0
   html: ^0.15.6
   flutter_tts: ^4.2.5
-  google_sign_in: ^7.2.0
-  googleapis: ^16.0.0
   receive_sharing_intent: ^1.8.1
+  # Android/iOS native files app (Storage Access Framework) for backup.
+  # Pinned to 10.3.3: newer majors adopt Kotlin DSL build scripts that fail
+  # to compile with this project's Gradle/Kotlin toolchain.
+  file_picker: 10.3.3
   flutter_widget_from_html: ^0.17.2
   intl: ^0.20.3
   url_launcher: ^6.3.2
@@ -51,6 +53,12 @@ dependencies:
   shared_preferences: ^2.5.5
   audio_service: ^0.18.19
   permission_handler: 12.0.1
+  # Pinned to 1.8.1: 1.9.0's Android build script (Kotlin DSL + KGP 2.3.x
+  # syntax) fails to compile with this project's Gradle/Kotlin toolchain.
+  dynamic_color: 1.8.1
+  # Matches the version bundled with the Flutter SDK (used for M3 tonal
+  # palettes when building Twine-style theme variants).
+  material_color_utilities: 0.11.1
 
 dev_dependencies:
   flutter_test:
@@ -74,6 +82,12 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  fonts:
+    # Twine-style UI font (OFL license) — variable weight Outfit.
+    - family: Outfit
+      fonts:
+        - asset: assets/fonts/Outfit.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:

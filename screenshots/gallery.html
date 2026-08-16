@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Read Later — new launcher icons + media notification icon</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #141414; color: #eee; margin: 0; padding: 24px; }
+  h1 { font-size: 20px; }
+  h2 { font-size: 15px; color: #bbb; margin: 32px 0 10px; }
+  .row { display: flex; flex-wrap: wrap; gap: 16px; }
+  figure { margin: 0; background: #1f1f1f; padding: 10px; border-radius: 8px; }
+  img { display: block; max-height: 420px; max-width: 100%; border-radius: 6px; }
+  figcaption { margin-top: 8px; font-size: 12px; color: #999; }
+  img.icon { max-height: 192px; image-rendering: pixelated; background: repeating-conic-gradient(#2a2a2a 0% 25%, #1f1f1f 0% 50%) 0 0 / 16px 16px; }
+</style>
+</head>
+<body>
+  <h1>Read Later — launcher icons + media notification icon</h1>
+
+  <h2>Media notification (the fix)</h2>
+  <div class="row">
+    <figure><img src="10_notification_shade.png"><figcaption>Notification shade with the media player card — "The Future of Reading … playing from Read Later", 3 controls, red accent (Android 15)</figcaption></figure>
+    <figure><img src="13_status_bar_playing.png"><figcaption>Status bar with playback active</figcaption></figure>
+    <figure><img class="icon" src="../android/app/src/main/res/mipmap-xxxhdpi/ic_stat_listening.png"><figcaption>ic_stat_listening.png — the new monochrome small icon used by the media notification (silhouette of the themed icon)</figcaption></figure>
+  </div>
+  <p style="font-size:13px;color:#999;max-width:1000px">Verified via <code>dumpsys notification</code> → small icon = <code>0x7f0d0005</code> = <code>mipmap/ic_stat_listening</code> (was <code>mipmap/ic_launcher</code> before the fix).</p>
+
+  <h2>Source launcher icon assets (xxxhdpi)</h2>
+  <div class="row">
+    <figure><img class="icon" src="../android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png"><figcaption>ic_launcher.png — legacy icon</figcaption></figure>
+    <figure><img class="icon" src="../android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_background.png"><figcaption>ic_launcher_background.png — adaptive background</figcaption></figure>
+    <figure><img class="icon" src="../android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png"><figcaption>ic_launcher_foreground.png — adaptive foreground</figcaption></figure>
+    <figure><img class="icon" src="../android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_monochrome.png"><figcaption>ic_launcher_monochrome.png — themed icon</figcaption></figure>
+  </div>
+
+  <h2>Launcher rendering</h2>
+  <div class="row">
+    <figure><img src="05_app_drawer_v2.png"><figcaption>App drawer — adaptive icon after wiring (cream squircle/circle + ribbon glyph)</figcaption></figure>
+    <figure><img src="03_app_drawer.png"><figcaption>App drawer — before wiring: icon stuck in a white circle</figcaption></figure>
+    <figure><img src="01_app_running.png"><figcaption>App running</figcaption></figure>
+  </div>
+</body>
+</html>
