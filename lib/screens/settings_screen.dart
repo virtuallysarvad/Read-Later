@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../data/article_repository.dart';
+import '../services/auto_backup_service.dart';
 import '../services/backup_service.dart';
 import '../services/tts_service.dart';
 import '../theme/app_theme.dart';
@@ -151,6 +152,7 @@ class _BackupSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final backup = context.watch<BackupService>();
+    final auto = context.watch<AutoBackupService>();
     final repository = context.read<ArticleRepository>();
     final theme = Theme.of(context);
 
@@ -214,7 +216,90 @@ class _BackupSection extends StatelessWidget {
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
+        const Divider(height: 32),
+        const _AutoBackupHeader(),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<AutoBackupFrequency?>(
+          initialValue: auto.frequency,
+          decoration: const InputDecoration(
+            labelText: 'Auto backup frequency',
+            border: OutlineInputBorder(),
+          ),
+          items: [
+            const DropdownMenuItem<AutoBackupFrequency?>(
+              value: null,
+              child: Text('Off'),
+            ),
+            for (final option in AutoBackupService.frequencyOptions)
+              DropdownMenuItem<AutoBackupFrequency?>(
+                value: option.value,
+                child: Text(option.label),
+              ),
+          ],
+          onChanged: (frequency) => auto.setFrequency(frequency),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () => auto.backupNow(repository.all),
+          icon: const Icon(Icons.schedule),
+          label: const Text('Back up now'),
+        ),
+        const SizedBox(height: 8),
+        _AutoBackupStatus(auto: auto),
       ],
+    );
+  }
+}
+
+class _AutoBackupHeader extends StatelessWidget {
+  const _AutoBackupHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Auto backup', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 2),
+        Text(
+          'Periodically saves a JSON copy of your library to the app\'s '
+          'storage, even when you don\'t open the app. Choose how often.',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AutoBackupStatus extends StatelessWidget {
+  final AutoBackupService auto;
+
+  const _AutoBackupStatus({required this.auto});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final last = auto.lastBackupAt;
+    final String text;
+    if (last == null) {
+      text = 'No auto backup has run yet.';
+    } else {
+      final count = auto.lastBackupCount;
+      final when = MaterialLocalizations.of(context).formatTimeOfDay(
+        TimeOfDay.fromDateTime(last),
+      );
+      final day = MaterialLocalizations.of(context).formatShortDate(last);
+      text = 'Last auto backup: $day, $when — '
+          '$count article${count == 1 ? '' : 's'}.';
+    }
+    return Text(
+      text,
+      style: theme.textTheme.bodySmall?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+      ),
     );
   }
 }

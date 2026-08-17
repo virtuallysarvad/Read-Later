@@ -3,10 +3,21 @@ import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
+import 'package:workmanager/workmanager.dart';
 
 import 'app.dart';
+import 'services/auto_backup_service.dart';
 import 'services/tts_audio_handler.dart';
 import 'services/tts_service.dart';
+
+/// Entry point for the WorkManager background isolate. Runs the auto-backup
+/// periodically (frequency chosen in Settings), even when the app is closed.
+@pragma('vm:entry-point')
+void autoBackupDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
+    return AutoBackupService.runScheduledBackup();
+  });
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,12 +30,13 @@ Future<void> main() async {
     config: const AudioServiceConfig(
       androidNotificationChannelId: 'com.readlater.read_later.playback',
       androidNotificationChannelName: 'Listening',
-      // Keep the notification and foreground service while paused so the
-      // player is persistent and can be resumed from the shade/lock screen.
-      // (audio_service forbids androidNotificationOngoing when the service
-      // stays in the foreground while paused.)
-      androidNotificationOngoing: false,
-      androidStopForegroundOnPause: false,
+      // A true ongoing media notification: it appears only while playback is
+      // active and carries the native media controls (play/pause, skip,
+      // seek bar). The service leaves the foreground when paused, so a bare
+      // "Read Later is running" foreground-service notification can never
+      // linger in the shade.
+      androidNotificationOngoing: true,
+      androidStopForegroundOnPause: true,
       // Monochrome silhouette (same art as the themed launcher icon) so the
       // media notification/status bar icon isn't a tinted blob of the
       // full-color launcher icon. Also required for the seek bar to render.
@@ -32,6 +44,11 @@ Future<void> main() async {
       notificationColor: Color(0xFFEF4056),
     ),
   );
+
+  // Periodic background auto-backup (Android WorkManager). The dispatcher
+  // must be registered before runApp.
+  await Workmanager().initialize(autoBackupDispatcher);
+
   unawaited(tts.init());
 
   // Links shared from other apps land here. The stream must be listened to

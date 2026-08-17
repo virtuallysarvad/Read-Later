@@ -13,6 +13,16 @@
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:usesCleartextTraffic="true">
+        <!--
+            Keeps mipmap/ic_stat_listening in release builds: audio_service
+            looks the media-notification icon up by NAME at runtime, so the
+            resource shrinker would otherwise strip it (startForeground then
+            crashes with "Invalid notification (no valid small icon)").
+            Referencing it here ties it to the manifest so it survives.
+        -->
+        <meta-data
+            android:name="read_later_media_notification_icon"
+            android:resource="@mipmap/ic_stat_listening" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -14,6 +14,10 @@ A Pocket-inspired read-later app for Android, built with Flutter.
   (`audio_service`), and playback keeps running in the background.
 - **File backup** — export your library to a JSON file (and restore it)
   through the Android native files app; you decide where it lives.
+- **Auto backup** — optionally save a JSON backup automatically every
+  12 hours, 24 hours, 1 day or 15 days (Settings → Backup → Auto backup).
+  The periodic backup runs in the background via Android WorkManager, even
+  when the app is closed, and lands in the app's external storage.
 - Favorites, archiving, search, read-progress tracking, light/dark themes.
 - **Simple theming** — **Light**, **Dark** (Pocket red palette) or
   **Dynamic** (follows your system's Material You colors and light/dark mode),
@@ -52,6 +56,12 @@ needed:
 - **Restore** opens the files app to pick a backup file. It merges by URL,
   keeping the newer copy of each article — local-only articles are never
   deleted.
+- **Auto backup** saves the same JSON automatically at the frequency you pick
+  (12 hours, 24 hours, 1 day or 15 days). The task is scheduled with Android
+  WorkManager, so it runs even when the app isn't open, and writes
+  `read_later_auto_backup.json` to the app's external files directory. The
+  **Back up now** button runs it immediately; the last backup time and article
+  count are shown below the picker.
 
 ## Architecture
 
@@ -94,6 +104,4 @@ JSON round-trip), the theme system, and app-level provider wiring.
 ## Roadmap ideas
 
 - Download article images for fully offline reading
-- Background playback / notification controls (media session)
 - Tags and text search over full content
-- Auto-sync on article save

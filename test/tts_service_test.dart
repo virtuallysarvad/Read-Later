@@ -246,6 +246,67 @@ void main() {
     });
   });
 
+  group('TtsService finishing an article', () {
+    setUp(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel('flutter_tts'),
+        (call) async => null,
+      );
+    });
+
+    tearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(const MethodChannel('flutter_tts'), null);
+    });
+
+    /// Simulates the TTS engine reporting that the current utterance
+    /// finished (the native side sends 'speak.onComplete' on the channel).
+    Future<void> completeSegment() async {
+      final messenger = TestDefaultBinaryMessengerBinding
+          .instance
+          .defaultBinaryMessenger;
+      final bytes = const StandardMethodCodec().encodeMethodCall(
+        const MethodCall('speak.onComplete'),
+      );
+      await messenger.handlePlatformMessage(
+        'flutter_tts',
+        bytes,
+        (_) {},
+      );
+    }
+
+    test('completing the last segment rewinds the saved session to the start',
+        () async {
+      SharedPreferences.setMockInitialValues({});
+      final tts = TtsService();
+      await tts.loadArticle(article);
+      await tts.play();
+      expect(tts.segmentIndex, 0);
+
+      // Speak through all four segments.
+      for (var i = 0; i < tts.segments.length; i++) {
+        await completeSegment();
+      }
+
+      // The article is done: playback stopped and the position was rewound
+      // to the beginning (YouTube-style replay), not left at the last
+      // segment.
+      expect(tts.isPlaying, isFalse);
+      expect(tts.segmentIndex, 0);
+      expect(tts.currentPosition, 0);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getInt('tts_session_segment'), 0);
+
+      // The article row also records the rewind so a later listen starts
+      // from the top.
+      final saved = repository.byId(article.id)!;
+      expect(saved.listenSegment, 0);
+      expect(saved.listenPosition, 0);
+    });
+  });
+
   group('TtsService seeking (scrub)', () {
     // The TTS engine isn't available in tests; stub its platform channel so
     // loading and seeking never touches the device.

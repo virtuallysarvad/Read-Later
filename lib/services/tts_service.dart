@@ -340,9 +340,12 @@ class TtsService extends ChangeNotifier {
     if (_segmentIndex + 1 < _segments.length) {
       _speakSegment(_segmentIndex + 1);
     } else {
-      // Reached the end of the article.
+      // Reached the end of the article. Rewind the saved session to the start
+      // (YouTube-style): the next launch offers the article from the beginning
+      // instead of resuming at the very end.
       _playing = false;
       _paused = false;
+      _segmentIndex = 0;
       _saveProgress();
     }
     notifyListeners();

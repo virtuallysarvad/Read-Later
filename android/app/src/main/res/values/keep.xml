@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  audio_service looks up the media-notification icon by NAME at runtime
+  (androidNotificationIcon: 'mipmap/ic_stat_listening'), so no manifest or
+  layout references it. Without this, Flutter's release resource shrinking
+  strips the drawable and startForeground crashes with "Invalid notification
+  (no valid small icon)". Keep it explicitly.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@mipmap/ic_stat_listening" />

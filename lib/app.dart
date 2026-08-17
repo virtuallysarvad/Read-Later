@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'data/article_repository.dart';
 import 'screens/home_screen.dart';
+import 'services/auto_backup_service.dart';
 import 'services/backup_service.dart';
 import 'services/tts_service.dart';
 import 'theme/app_theme.dart';
@@ -29,6 +30,8 @@ class ReadLaterApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ArticleRepository()..init()),
         ChangeNotifierProvider(create: (_) => tts),
         ChangeNotifierProvider(create: (_) => BackupService()),
+        // Loads the saved frequency and re-applies the WorkManager schedule.
+        ChangeNotifierProvider(create: (_) => AutoBackupService()..init()),
         ChangeNotifierProvider(create: (_) => ThemeController()..load()),
       ],
       // DynamicColorBuilder surfaces the platform's Material You colors
